@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0334d6755fbd2a445a9e2bc745646f8a, type: 3}
+  m_Name: DefaultGameConfig
+  m_EditorClassIdentifier: Assembly-CSharp::Severance.GameConfig
+  gridWidth: 20
+  gridHeight: 20
+  tileSize: 1
+  tileSpacing: 0.1
+  stageConfig: {fileID: 11400000, guid: 5df119f6983ecd045b739e40c263e494, type: 2}
+  maxLevel: 10
+  enableFogOfWar: 1
+  fogOfWarRadius: 2
+  initialPower: 0
+  powerPerExpansion: 1
+  powerSetting:
+    count: 8
+    productionInterval: 1
+    gainAmount: 3
+  ironSetting:
+    count: 5
+    productionInterval: 1
+    gainAmount: 1
+  copperSetting:
+    count: 5
+    productionInterval: 1
+    gainAmount: 1
+  upSetting:
+    requiredResource: 3
+    cost: 3
+    maxRange: 0
+  downSetting:
+    requiredResource: 3
+    cost: 3
+    maxRange: 0
+  leftSetting:
+    requiredResource: 3
+    cost: 3
+    maxRange: 0
+  rightSetting:
+    requiredResource: 3
+    cost: 3
+    maxRange: 0
+  tShapeSetting:
+    requiredResource: 2
+    cost: 3
+    maxRange: 0
+  crossSetting:
+    requiredResource: 2
+    cost: 4
+    maxRange: 0
+  eightWaySetting:
+    requiredResource: 2
+    cost: 5
+    maxRange: 3
+  playerCorePosition: {x: 2, y: 2}
+  playerStartDirection: 6
+  enemyActionChance: 10
+  enemyComboActionChance: 0
+  enemyLevelGrowthChance: 5
+  enemyHighLevelSpikeChance: 0
+  enemyCoreSafeZonePercent: 22
+  enemyEmitterSpacingPercent: 20
+  enemyFrontlineBuildWeight: 0
+  enemySpearheadWeight: 20
+  enemyFanoutWeight: 20
+  enemyHiddenIncursionWeight: 20
+  enemyFlankIncursionWeight: 20
+  enemyResourceRaidWeight: 0
+  enemyConsolidateWeight: 0

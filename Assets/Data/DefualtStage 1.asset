@@ -22,6 +22,9 @@ MonoBehaviour:
   - position: {x: 1, y: 1}
     resourceType: 1
     yield: 1
+  - position: {x: 2, y: 0}
+    resourceType: 1
+    yield: 1
   - position: {x: 2, y: 10}
     resourceType: 1
     yield: 1
@@ -36,9 +39,6 @@ MonoBehaviour:
     yield: 1
   - position: {x: 5, y: 8}
     resourceType: 3
-    yield: 1
-  - position: {x: 6, y: 2}
-    resourceType: 1
     yield: 1
   - position: {x: 6, y: 12}
     resourceType: 2
@@ -79,4 +79,4 @@ MonoBehaviour:
   enemyEmitters:
   - position: {x: 17, y: 17}
     level: 3
-    direction: 6
+    direction: 5

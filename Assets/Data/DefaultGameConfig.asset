@@ -63,8 +63,8 @@ MonoBehaviour:
     cost: 5
     maxRange: 3
   playerCorePosition: {x: 2, y: 2}
-  playerStartDirection: 6
-  enemyActionChance: 10
+  playerStartDirection: 5
+  enemyActionChance: 20
   enemyComboActionChance: 0
   enemyLevelGrowthChance: 5
   enemyHighLevelSpikeChance: 0

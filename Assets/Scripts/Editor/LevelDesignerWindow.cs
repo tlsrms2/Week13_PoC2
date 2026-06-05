@@ -33,6 +33,26 @@ namespace Severance.Editor
         private const float MinWindowWidth = 520f;
         private const float MinWindowHeight = 400f;
 
+        private static readonly EmitterDirection[] DirectionOptions =
+        {
+            EmitterDirection.Up,
+            EmitterDirection.Down,
+            EmitterDirection.Left,
+            EmitterDirection.Right,
+            EmitterDirection.TShape,
+            EmitterDirection.Cross
+        };
+
+        private static readonly string[] DirectionOptionLabels =
+        {
+            "위",
+            "아래",
+            "왼쪽",
+            "오른쪽",
+            "T자",
+            "십자"
+        };
+
         #endregion
 
         #region State
@@ -266,7 +286,7 @@ namespace Severance.Editor
             EditorGUILayout.LabelField("플레이어 코어", EditorStyles.boldLabel);
             EditorGUILayout.Space(4);
 
-            DrawPropertyField("playerCorePosition", "코어 시작 좌표");
+            DrawPropertyField("playerCorePosition", "코어 좌표");
         }
 
         #endregion
@@ -288,9 +308,9 @@ namespace Severance.Editor
 
         private void DrawEmitterCostSettings()
         {
-            EditorGUILayout.LabelField("플레이어 시작 방향", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("플레이어 코어 방향", EditorStyles.boldLabel);
             EditorGUILayout.Space(4);
-            DrawPropertyField("playerStartDirection", "코어 초기 방향");
+            DrawEmitterDirectionField("playerStartDirection", "코어 표시 방향");
 
             EditorGUILayout.Space(8);
             EditorGUILayout.LabelField("진원 세부 설정 (방향별)", EditorStyles.boldLabel);
@@ -302,7 +322,6 @@ namespace Severance.Editor
             DrawEmitterSettingFields("rightSetting", "오른쪽 방향 (Right)");
             DrawEmitterSettingFields("tShapeSetting", "T자 모양 (TShape)");
             DrawEmitterSettingFields("crossSetting", "십자 모양 (Cross)");
-            DrawEmitterSettingFields("eightWaySetting", "팔방향 (EightWay)");
 
             // 비용 미리보기
             EditorGUILayout.Space(8);
@@ -317,7 +336,6 @@ namespace Severance.Editor
                 DrawEmitterSummaryRow("오른쪽 (Right)", EmitterDirection.Right);
                 DrawEmitterSummaryRow("T자 (TShape)", EmitterDirection.TShape);
                 DrawEmitterSummaryRow("십자 (Cross)", EmitterDirection.Cross);
-                DrawEmitterSummaryRow("팔방 (EightWay)", EmitterDirection.EightWay);
             }
         }
 
@@ -387,7 +405,7 @@ namespace Severance.Editor
 
             DrawWeightSlider("enemyFrontlineBuildWeight", "전선 압박");
             DrawWeightSlider("enemySpearheadWeight", "직선 돌파");
-            DrawWeightSlider("enemyFanoutWeight", "팔방 확산");
+            DrawWeightSlider("enemyFanoutWeight", "확산");
             DrawWeightSlider("enemyHiddenIncursionWeight", "은닉 침투");
             DrawWeightSlider("enemyFlankIncursionWeight", "측면 침투");
             DrawWeightSlider("enemyResourceRaidWeight", "자원 견제");
@@ -624,6 +642,34 @@ namespace Severance.Editor
             {
                 EditorGUILayout.HelpBox($"'{propertyName}' 필드를 찾을 수 없습니다.", MessageType.Warning);
             }
+        }
+
+        private void DrawEmitterDirectionField(string propertyName, string label)
+        {
+            SerializedProperty prop = _serializedConfig.FindProperty(propertyName);
+            if (prop == null)
+            {
+                EditorGUILayout.HelpBox($"'{propertyName}' 필드를 찾을 수 없습니다.", MessageType.Warning);
+                return;
+            }
+
+            EmitterDirection current = (EmitterDirection)prop.enumValueIndex;
+            int selectedIndex = GetDirectionOptionIndex(current);
+            selectedIndex = EditorGUILayout.Popup(label, selectedIndex, DirectionOptionLabels);
+            prop.enumValueIndex = (int)DirectionOptions[selectedIndex];
+        }
+
+        private static int GetDirectionOptionIndex(EmitterDirection direction)
+        {
+            for (int i = 0; i < DirectionOptions.Length; i++)
+            {
+                if (DirectionOptions[i] == direction)
+                {
+                    return i;
+                }
+            }
+
+            return DirectionOptions.Length - 1;
         }
 
         private void DrawPercentSlider(string propertyName, string label)

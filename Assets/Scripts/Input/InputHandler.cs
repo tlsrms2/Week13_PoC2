@@ -47,7 +47,6 @@ namespace Severance
         [SerializeField] private Camera inputCamera;
 
         private Vector2Int? _lastPreviewPos;
-        private Vector2Int? _hoverSupportPreviewPos;
         private Vector2Int _lastHoverPos = new Vector2Int(int.MinValue, int.MinValue);
         private readonly List<Vector2Int> _hoverOutlinePositions = new List<Vector2Int>();
 
@@ -266,7 +265,6 @@ namespace Severance
                 if (_lastHoverPos != new Vector2Int(int.MinValue, int.MinValue))
                 {
                     ClearHoveredEmitterAreaOutline();
-                    ClearHoveredEmitterSupportPreview();
                     _lastHoverPos = new Vector2Int(int.MinValue, int.MinValue);
                     OnTileHovered?.Invoke(_lastHoverPos);
                 }
@@ -279,7 +277,6 @@ namespace Severance
                 if (_lastHoverPos != new Vector2Int(int.MinValue, int.MinValue))
                 {
                     ClearHoveredEmitterAreaOutline();
-                    ClearHoveredEmitterSupportPreview();
                     _lastHoverPos = new Vector2Int(int.MinValue, int.MinValue);
                     OnTileHovered?.Invoke(_lastHoverPos);
                 }
@@ -350,7 +347,6 @@ namespace Severance
         private void UpdateHoveredEmitterAreaOutline(Vector2Int gridPos)
         {
             ClearHoveredEmitterAreaOutline();
-            ClearHoveredEmitterSupportPreview();
 
             if (!GridManager.HasInstance ||
                 !GameManager.HasInstance ||
@@ -368,7 +364,10 @@ namespace Severance
             }
 
             GridVisualizer visualizer = GameManager.Instance.Visualizer;
-            ShowHoveredEmitterSupportPreview(visualizer, hoverTile, emitter);
+            if (TryShowHoveredEmitterSupportAreas(visualizer, grid, hoverTile, emitter))
+            {
+                return;
+            }
 
             HashSet<Vector2Int> areaTiles = new HashSet<Vector2Int>();
             AddEmitterAreaTile(areaTiles, grid, emitter, emitter.Position);
@@ -378,6 +377,51 @@ namespace Severance
                 AddEmitterAreaTile(areaTiles, grid, emitter, ownedPos);
             }
 
+            ShowAreaOutline(visualizer, areaTiles);
+        }
+
+        private bool TryShowHoveredEmitterSupportAreas(
+            GridVisualizer visualizer,
+            GridManager grid,
+            TileData hoverTile,
+            Emitter emitter)
+        {
+            if (visualizer == null ||
+                grid == null ||
+                hoverTile == null ||
+                emitter == null ||
+                !EmitterManager.HasStableBaseSupport(hoverTile, emitter))
+            {
+                return false;
+            }
+
+            List<Emitter> supporters = EmitterManager.GetCriticalBaseSupportEmitters(hoverTile, emitter);
+            if (supporters.Count == 0)
+            {
+                return false;
+            }
+
+            HashSet<Vector2Int> supportAreaTiles = new HashSet<Vector2Int>();
+            foreach (Emitter supporter in supporters)
+            {
+                if (supporter == null)
+                {
+                    continue;
+                }
+
+                AddEmitterAreaTile(supportAreaTiles, grid, supporter, supporter.Position);
+                foreach (Vector2Int ownedPos in supporter.OwnedTiles)
+                {
+                    AddEmitterAreaTile(supportAreaTiles, grid, supporter, ownedPos);
+                }
+            }
+
+            ShowAreaOutline(visualizer, supportAreaTiles);
+            return supportAreaTiles.Count > 0;
+        }
+
+        private void ShowAreaOutline(GridVisualizer visualizer, HashSet<Vector2Int> areaTiles)
+        {
             foreach (Vector2Int pos in areaTiles)
             {
                 TileView view = visualizer.GetView(pos);
@@ -394,26 +438,6 @@ namespace Severance
                 view.SetEmitterAreaOutline(up, right, down, left);
                 _hoverOutlinePositions.Add(pos);
             }
-        }
-
-        private void ShowHoveredEmitterSupportPreview(
-            GridVisualizer visualizer,
-            TileData hoverTile,
-            Emitter emitter)
-        {
-            if (visualizer == null || hoverTile == null || emitter == null)
-            {
-                return;
-            }
-
-            TileView emitterView = visualizer.GetView(emitter.Position);
-            if (emitterView == null)
-            {
-                return;
-            }
-
-            emitterView.ShowSupportPreview(hoverTile);
-            _hoverSupportPreviewPos = emitter.Position;
         }
 
         private static void AddEmitterAreaTile(HashSet<Vector2Int> areaTiles, GridManager grid, Emitter emitter, Vector2Int pos)
@@ -453,25 +477,6 @@ namespace Severance
             }
 
             _hoverOutlinePositions.Clear();
-        }
-
-        private void ClearHoveredEmitterSupportPreview()
-        {
-            if (!_hoverSupportPreviewPos.HasValue ||
-                !GameManager.HasInstance ||
-                GameManager.Instance.Visualizer == null)
-            {
-                _hoverSupportPreviewPos = null;
-                return;
-            }
-
-            TileView view = GameManager.Instance.Visualizer.GetView(_hoverSupportPreviewPos.Value);
-            if (view != null)
-            {
-                view.ClearSupportPreview();
-            }
-
-            _hoverSupportPreviewPos = null;
         }
 
         private bool TryGetMouseGridPosition(out Vector2Int gridPos)

@@ -43,12 +43,10 @@ namespace Severance
         /// <summary>吏꾩썝???ㅻⅨ 吏꾩썝???곹뼢沅??덉뿉 ?덉쓣 ???쒖떆???섏씠?쇱씠???됱긽.</summary>
         private static readonly Color SupportedEmitterColor = new Color(0.25f, 1f, 0.35f, 0.42f);
 
-        /// <summary>吏꾩썝??吏?깊븯??遺紐?吏꾩썝源뚯? 洹몃━???곌껐???됱긽.</summary>
-        private static readonly Color SupportLinkColor = new Color(0.2f, 1f, 0.32f, 0.78f);
-
         private static readonly Color PlacementValidColor = new Color(0.25f, 1f, 0.35f, 0.35f);
         private static readonly Color PlacementInvalidColor = new Color(1f, 0.2f, 0.2f, 0.35f);
         private static readonly Color EmitterAreaOutlineColor = new Color(0.2f, 1f, 0.32f, 1f);
+        private static readonly Color CoreBorderColor = new Color(0.00f, 0.10f, 1.00f, 1f);
         private static readonly Color PlayerExpansionIntentColor = new Color(0.00f, 0.00f, 1.00f, 1f); // #0000FF
         private static readonly Color EnemyExpansionIntentColor = new Color(1.00f, 0.00f, 0.00f, 1f);  // #FF0000
         private static readonly Color OffEmitterColor = new Color(0.42f, 0.42f, 0.42f, 1f);
@@ -93,6 +91,18 @@ namespace Severance
         [Tooltip("?ㅻⅨ履?Right) 諛⑺뼢 ?대????곸뿭 ?쒖떆瑜??뚮뜑留곹븷 ?ㅽ봽?쇱씠???뚮뜑??")]
         [SerializeField] private SpriteRenderer emitterIndicatorRight;
 
+        [Tooltip("위(Up) 방향 이미터 영역 레벨 텍스트.")]
+        [SerializeField] private TextMeshProUGUI emitterLevelTextUp;
+
+        [Tooltip("아래(Down) 방향 이미터 영역 레벨 텍스트.")]
+        [SerializeField] private TextMeshProUGUI emitterLevelTextDown;
+
+        [Tooltip("왼쪽(Left) 방향 이미터 영역 레벨 텍스트.")]
+        [SerializeField] private TextMeshProUGUI emitterLevelTextLeft;
+
+        [Tooltip("오른쪽(Right) 방향 이미터 영역 레벨 텍스트.")]
+        [SerializeField] private TextMeshProUGUI emitterLevelTextRight;
+
         [Tooltip("醫뚯륫 ?곷떒(UpLeft) ?媛곸꽑 諛⑺뼢 ?대????곸뿭 ?쒖떆 ?ㅽ봽?쇱씠???뚮뜑??")]
         [SerializeField] private SpriteRenderer emitterIndicatorUpLeft;
 
@@ -124,9 +134,8 @@ namespace Severance
         /// <summary>?꾩옱 ??쇱씠 ?덇컻??媛?ㅼ?吏 ?딄퀬 諛앺?吏?媛???곹깭?몄? ?щ?.</summary>
         private bool _isVisible = true;
 
-        /// <summary>吏꾩썝 吏??愿怨꾨? ?쒖떆?섎뒗 ?고????곌껐???.</summary>
-        private readonly List<LineRenderer> _supportLinkLines = new List<LineRenderer>();
         private readonly List<LineRenderer> _resourceBorderLines = new List<LineRenderer>();
+        private readonly List<LineRenderer> _coreBorderLines = new List<LineRenderer>();
         private readonly List<LineRenderer> _emitterAreaOutlineLines = new List<LineRenderer>();
         private readonly List<LineRenderer> _expansionIntentLines = new List<LineRenderer>();
         private readonly List<TextMeshPro> _expansionIntentTexts = new List<TextMeshPro>();
@@ -171,6 +180,7 @@ namespace Severance
                 levelText.text = string.Empty;
             }
 
+            ClearEmitterDirectionLevelTexts();
             EnsureSupportedEmitterOverlay();
             EnsurePlacementPreviewOverlay();
             EnsureResourceBorderLines();
@@ -283,6 +293,11 @@ namespace Severance
         /// </summary>
         private Color GetOwnerColor(Owner owner, int level)
         {
+            if (level <= 0)
+            {
+                return NeutralColor;
+            }
+
             switch (owner)
             {
                 case Owner.Player:
@@ -397,9 +412,10 @@ namespace Severance
         {
             if (emitter == null)
             {
+                SetCoreBorderVisible(false);
                 if (_placementPreviewActive)
                 {
-                    ApplyDirectionIndicators(_placementPreviewDirection, true);
+                    ApplyDirectionIndicators(_placementPreviewDirection, 0);
                     return;
                 }
 
@@ -411,34 +427,52 @@ namespace Severance
                 if (emitterIndicatorUpRight != null) emitterIndicatorUpRight.enabled = false;
                 if (emitterIndicatorDownLeft != null) emitterIndicatorDownLeft.enabled = false;
                 if (emitterIndicatorDownRight != null) emitterIndicatorDownRight.enabled = false;
+                ClearEmitterDirectionLevelTexts();
                 return;
             }
 
-            ApplyDirectionIndicators(emitter.Direction, emitter.IsOn);
+            if (emitter.IsCore)
+            {
+                HideDirectionIndicators();
+                ClearEmitterDirectionLevelTexts();
+                SetCoreBorderVisible(true);
+                return;
+            }
+
+            SetCoreBorderVisible(false);
+            ApplyDirectionIndicators(emitter.Direction, emitter.Level);
         }
 
-        private void ApplyDirectionIndicators(EmitterDirection direction, bool isOn)
+        private void HideDirectionIndicators()
+        {
+            if (emitterIndicatorUp != null) emitterIndicatorUp.enabled = false;
+            if (emitterIndicatorDown != null) emitterIndicatorDown.enabled = false;
+            if (emitterIndicatorLeft != null) emitterIndicatorLeft.enabled = false;
+            if (emitterIndicatorRight != null) emitterIndicatorRight.enabled = false;
+            if (emitterIndicatorUpLeft != null) emitterIndicatorUpLeft.enabled = false;
+            if (emitterIndicatorUpRight != null) emitterIndicatorUpRight.enabled = false;
+            if (emitterIndicatorDownLeft != null) emitterIndicatorDownLeft.enabled = false;
+            if (emitterIndicatorDownRight != null) emitterIndicatorDownRight.enabled = false;
+        }
+
+        private void ApplyDirectionIndicators(EmitterDirection direction, int level)
         {
             bool hasUp = direction == EmitterDirection.Up ||
                          direction == EmitterDirection.TShape ||
-                         direction == EmitterDirection.Cross ||
-                         direction == EmitterDirection.EightWay;
+                         direction == EmitterDirection.Cross;
             bool hasDown = direction == EmitterDirection.Down ||
-                           direction == EmitterDirection.Cross ||
-                           direction == EmitterDirection.EightWay;
+                           direction == EmitterDirection.Cross;
             bool hasLeft = direction == EmitterDirection.Left ||
                            direction == EmitterDirection.TShape ||
-                           direction == EmitterDirection.Cross ||
-                           direction == EmitterDirection.EightWay;
+                           direction == EmitterDirection.Cross;
             bool hasRight = direction == EmitterDirection.Right ||
                             direction == EmitterDirection.TShape ||
-                            direction == EmitterDirection.Cross ||
-                            direction == EmitterDirection.EightWay;
+                            direction == EmitterDirection.Cross;
 
-            bool hasUpLeft = direction == EmitterDirection.EightWay;
-            bool hasUpRight = direction == EmitterDirection.EightWay;
-            bool hasDownLeft = direction == EmitterDirection.EightWay;
-            bool hasDownRight = direction == EmitterDirection.EightWay;
+            bool hasUpLeft = false;
+            bool hasUpRight = false;
+            bool hasDownLeft = false;
+            bool hasDownRight = false;
 
             if (emitterIndicatorUp != null)
             {
@@ -479,6 +513,31 @@ namespace Severance
             {
                 emitterIndicatorDownRight.enabled = hasDownRight;
             }
+
+            bool showLevelText = level > 0;
+            SetEmitterDirectionLevelText(emitterLevelTextUp, hasUp && showLevelText, level);
+            SetEmitterDirectionLevelText(emitterLevelTextDown, hasDown && showLevelText, level);
+            SetEmitterDirectionLevelText(emitterLevelTextLeft, hasLeft && showLevelText, level);
+            SetEmitterDirectionLevelText(emitterLevelTextRight, hasRight && showLevelText, level);
+        }
+
+        private static void SetEmitterDirectionLevelText(TextMeshProUGUI text, bool visible, int level)
+        {
+            if (text == null)
+            {
+                return;
+            }
+
+            text.enabled = visible;
+            text.text = visible ? level.ToString() : string.Empty;
+        }
+
+        private void ClearEmitterDirectionLevelTexts()
+        {
+            SetEmitterDirectionLevelText(emitterLevelTextUp, false, 0);
+            SetEmitterDirectionLevelText(emitterLevelTextDown, false, 0);
+            SetEmitterDirectionLevelText(emitterLevelTextLeft, false, 0);
+            SetEmitterDirectionLevelText(emitterLevelTextRight, false, 0);
         }
 
         public void SetPlacementPreview(bool visible, bool canPlace, EmitterDirection direction)
@@ -543,7 +602,6 @@ namespace Severance
             }
 
             UpdateSupportedEmitterOverlay(true);
-            UpdateSupportLinks(data);
         }
 
         public void ClearSupportPreview()
@@ -552,8 +610,6 @@ namespace Severance
             {
                 supportedEmitterOverlay.enabled = false;
             }
-
-            HideAllSupportLinks();
         }
 
         public void SetExpansionIntent(Vector2Int approachDirection, int playerLevel, int enemyLevel)
@@ -706,95 +762,6 @@ namespace Severance
         }
 
         /// <summary>
-        /// ??吏꾩썝??吏?깊븯??遺紐?吏꾩썝?ㅼ쓽 ?꾩튂源뚯? ?숈쟻 ?곌껐?좎쓣 ?쒖떆?⑸땲??
-        /// </summary>
-        private void UpdateSupportLinks(TileData data)
-        {
-            HideAllSupportLinks();
-
-            if (!data.IsOccupiedByEmitter ||
-                data.Emitter == null ||
-                data.Emitter.Level <= 1 ||
-                !GameManager.HasInstance ||
-                GameManager.Instance.Visualizer == null)
-            {
-                return;
-            }
-
-            List<Emitter> supporters =
-                EmitterManager.GetCriticalBaseSupportEmitters(data, data.Emitter);
-
-            for (int i = 0; i < supporters.Count; i++)
-            {
-                Emitter parent = supporters[i];
-                if (parent == null)
-                {
-                    continue;
-                }
-
-                TileView parentView = GameManager.Instance.Visualizer.GetView(parent.Position);
-                if (parentView == null)
-                {
-                    continue;
-                }
-
-                LineRenderer line = GetSupportLinkLine(i);
-                line.enabled = true;
-
-                Vector3 start = transform.position;
-                Vector3 end = parentView.transform.position;
-                start.z = -0.08f;
-                end.z = -0.08f;
-
-                line.SetPosition(0, start);
-                line.SetPosition(1, end);
-            }
-        }
-
-        private LineRenderer GetSupportLinkLine(int index)
-        {
-            while (_supportLinkLines.Count <= index)
-            {
-                _supportLinkLines.Add(CreateSupportLinkLine(_supportLinkLines.Count));
-            }
-
-            return _supportLinkLines[index];
-        }
-
-        private LineRenderer CreateSupportLinkLine(int index)
-        {
-            GameObject lineObj = new GameObject($"SupportLink_{index}");
-            lineObj.transform.SetParent(transform, false);
-
-            LineRenderer line = lineObj.AddComponent<LineRenderer>();
-            line.useWorldSpace = true;
-            line.positionCount = 2;
-            line.startWidth = 0.045f;
-            line.endWidth = 0.045f;
-            line.numCapVertices = 4;
-            line.numCornerVertices = 2;
-            line.material = new Material(Shader.Find("Sprites/Default"));
-            line.startColor = SupportLinkColor;
-            line.endColor = SupportLinkColor;
-            line.sortingLayerID = tileRenderer != null ? tileRenderer.sortingLayerID : 0;
-            line.sortingOrder = tileRenderer != null ? tileRenderer.sortingOrder + 3 : 3;
-            line.enabled = false;
-
-            return line;
-        }
-
-        private void HideAllSupportLinks()
-        {
-            for (int i = 0; i < _supportLinkLines.Count; i++)
-            {
-                if (_supportLinkLines[i] != null)
-                {
-                    _supportLinkLines[i].enabled = false;
-                }
-            }
-        }
-
-        /// <summary>
         /// ?꾨━???섏젙 ?놁씠???곹뼢沅??쒖떆媛 媛?ν븯?꾨줉 ?고????ㅻ쾭?덉씠瑜?以鍮꾪빀?덈떎.
         /// </summary>
         private void EnsureSupportedEmitterOverlay()
@@ -901,6 +868,68 @@ namespace Severance
             resourceYieldText.sortingLayerID = tileRenderer.sortingLayerID;
             resourceYieldText.sortingOrder = tileRenderer.sortingOrder + 9;
             resourceYieldText.enabled = false;
+        }
+
+        private void SetCoreBorderVisible(bool visible)
+        {
+            if (visible)
+            {
+                EnsureCoreBorderLines();
+            }
+
+            for (int i = 0; i < _coreBorderLines.Count; i++)
+            {
+                if (_coreBorderLines[i] != null)
+                {
+                    _coreBorderLines[i].enabled = visible;
+                }
+            }
+        }
+
+        private void EnsureCoreBorderLines()
+        {
+            if (_coreBorderLines.Count > 0 || tileRenderer == null)
+            {
+                return;
+            }
+
+            Vector3[] starts =
+            {
+                new Vector3(-0.49f, 0.49f, -0.11f),
+                new Vector3(0.49f, 0.49f, -0.11f),
+                new Vector3(0.49f, -0.49f, -0.11f),
+                new Vector3(-0.49f, -0.49f, -0.11f)
+            };
+
+            Vector3[] ends =
+            {
+                new Vector3(0.49f, 0.49f, -0.11f),
+                new Vector3(0.49f, -0.49f, -0.11f),
+                new Vector3(-0.49f, -0.49f, -0.11f),
+                new Vector3(-0.49f, 0.49f, -0.11f)
+            };
+
+            for (int i = 0; i < 4; i++)
+            {
+                GameObject lineObj = new GameObject($"CoreBorder_{i}");
+                lineObj.transform.SetParent(transform, false);
+
+                LineRenderer line = lineObj.AddComponent<LineRenderer>();
+                line.useWorldSpace = false;
+                line.positionCount = 2;
+                line.startWidth = 0.08f;
+                line.endWidth = 0.08f;
+                line.numCapVertices = 2;
+                line.material = new Material(Shader.Find("Sprites/Default"));
+                line.startColor = CoreBorderColor;
+                line.endColor = CoreBorderColor;
+                line.sortingLayerID = tileRenderer.sortingLayerID;
+                line.sortingOrder = tileRenderer.sortingOrder + 8;
+                line.SetPosition(0, starts[i]);
+                line.SetPosition(1, ends[i]);
+                line.enabled = false;
+                _coreBorderLines.Add(line);
+            }
         }
 
         private void EnsureExpansionIntentMarkers()
@@ -1144,6 +1173,7 @@ namespace Severance
             if (emitterIndicatorUpRight != null) emitterIndicatorUpRight.enabled = false;
             if (emitterIndicatorDownLeft != null) emitterIndicatorDownLeft.enabled = false;
             if (emitterIndicatorDownRight != null) emitterIndicatorDownRight.enabled = false;
+            ClearEmitterDirectionLevelTexts();
             if (supportedEmitterOverlay != null) supportedEmitterOverlay.enabled = false;
             if (resourceYieldText != null)
             {
@@ -1157,8 +1187,8 @@ namespace Severance
                     _resourceBorderLines[i].enabled = false;
                 }
             }
+            SetCoreBorderVisible(false);
             ClearEmitterAreaOutline();
-            HideAllSupportLinks();
             ClearExpansionIntentPreview();
         }
 

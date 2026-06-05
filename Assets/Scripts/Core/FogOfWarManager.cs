@@ -49,7 +49,7 @@ namespace Severance
 
             foreach (TileData tile in grid.AllTiles)
             {
-                if (tile.Owner != Owner.Player)
+                if (tile.Owner != Owner.Player || tile.Level <= 0)
                 {
                     continue;
                 }
@@ -89,7 +89,7 @@ namespace Severance
             // 해당 타일 기준 시야 반경 내에 플레이어 영토가 존재한다면 밝혀진 구역으로 판정
             foreach (TileData tile in grid.GetTilesInRadius(pos, radius))
             {
-                if (tile.Owner == Owner.Player)
+                if (tile.Owner == Owner.Player && tile.Level > 0)
                 {
                     return true;
                 }

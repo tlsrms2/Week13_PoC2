@@ -29,18 +29,6 @@ namespace Severance
         /// <summary>방향 오프셋: 오른쪽 (+X).</summary>
         private static readonly Vector2Int DirRight = new Vector2Int(1, 0);
 
-        /// <summary>방향 오프셋: 좌측 상단 대각선.</summary>
-        private static readonly Vector2Int DirUpLeft = new Vector2Int(-1, 1);
-
-        /// <summary>방향 오프셋: 우측 상단 대각선.</summary>
-        private static readonly Vector2Int DirUpRight = new Vector2Int(1, 1);
-
-        /// <summary>방향 오프셋: 좌측 하단 대각선.</summary>
-        private static readonly Vector2Int DirDownLeft = new Vector2Int(-1, -1);
-
-        /// <summary>방향 오프셋: 우측 하단 대각선.</summary>
-        private static readonly Vector2Int DirDownRight = new Vector2Int(1, -1);
-
         #endregion
 
         #region Read-Only Properties
@@ -155,15 +143,9 @@ namespace Severance
                 case EmitterDirection.TShape:
                     return new List<Vector2Int> { DirUp, DirLeft, DirRight };
 
+                case EmitterDirection.EightWay:
                 case EmitterDirection.Cross:
                     return new List<Vector2Int> { DirUp, DirDown, DirLeft, DirRight };
-
-                case EmitterDirection.EightWay:
-                    return new List<Vector2Int>
-                    {
-                        DirUp, DirDown, DirLeft, DirRight,
-                        DirUpLeft, DirUpRight, DirDownLeft, DirDownRight
-                    };
 
                 default:
                     Debug.LogWarning($"[Emitter] 미지원 확장 이미터 템플릿 정의: {Direction}");

@@ -232,19 +232,12 @@ namespace Severance
         {
             foreach (Emitter emitter in emitters)
             {
-                if (emitter == null || !emitter.IsOn)
+                if (emitter == null || !emitter.IsOn || emitter.IsCore)
                 {
                     continue;
                 }
 
-                if (emitter.Direction == EmitterDirection.EightWay)
-                {
-                    AddEightWayExpansionIntentPreviews(grid, emitter, boundaryPowers, boundaryContributors);
-                }
-                else
-                {
-                    AddLinearExpansionIntentPreviews(grid, emitter, boundaryPowers, boundaryContributors);
-                }
+                AddLinearExpansionIntentPreviews(grid, emitter, boundaryPowers, boundaryContributors);
             }
         }
 
@@ -282,55 +275,6 @@ namespace Severance
                 }
 
                 AddExpansionBoundaryPower(boundaryPowers, boundaryContributors, sourcePos, direction, emitter);
-            }
-        }
-
-        private void AddEightWayExpansionIntentPreviews(
-            GridManager grid,
-            Emitter emitter,
-            Dictionary<ExpansionBoundaryKey, ExpansionBoundaryPower> boundaryPowers,
-            Dictionary<ExpansionBoundaryKey, HashSet<Emitter>> boundaryContributors)
-        {
-            int minConnected = int.MaxValue;
-            foreach (Vector2Int direction in emitter.GetExpansionDirections())
-            {
-                minConnected = Mathf.Min(minConnected, GetConnectedDistance(grid, emitter, direction));
-            }
-
-            if (minConnected == int.MaxValue || IsAtMaxRange(emitter, minConnected))
-            {
-                return;
-            }
-
-            int nextDistance = minConnected + 1;
-            for (int dx = -nextDistance; dx <= nextDistance; dx++)
-            {
-                for (int dy = -nextDistance; dy <= nextDistance; dy++)
-                {
-                    if (Mathf.Abs(dx) != nextDistance && Mathf.Abs(dy) != nextDistance)
-                    {
-                        continue;
-                    }
-
-                    Vector2Int targetPos = emitter.Position + new Vector2Int(dx, dy);
-                    if (!grid.IsInBounds(targetPos))
-                    {
-                        continue;
-                    }
-
-                    if (!TryGetEightWayApproach(
-                            grid,
-                            emitter,
-                            targetPos,
-                            nextDistance,
-                            out Vector2Int sourcePos,
-                            out Vector2Int approach))
-                    {
-                        continue;
-                    }
-
-                    AddExpansionBoundaryPower(boundaryPowers, boundaryContributors, sourcePos, approach, emitter);
-                }
             }
         }
 
@@ -407,72 +351,6 @@ namespace Severance
 
             key = new ExpansionBoundaryKey(Vector2Int.zero, Vector2Int.zero);
             return false;
-        }
-
-        private static bool TryGetEightWayApproach(
-            GridManager grid,
-            Emitter emitter,
-            Vector2Int targetPos,
-            int nextDistance,
-            out Vector2Int sourcePos,
-            out Vector2Int approach)
-        {
-            Vector2Int[] approaches =
-            {
-                Vector2Int.up,
-                Vector2Int.down,
-                Vector2Int.left,
-                Vector2Int.right
-            };
-
-            foreach (Vector2Int candidate in approaches)
-            {
-                Vector2Int candidateSourcePos = targetPos - candidate;
-                if (IsInnerEightWaySource(emitter, candidateSourcePos, nextDistance) &&
-                    CanEmitterExpandFrom(emitter, grid.GetTile(candidateSourcePos)) &&
-                    CanEmitterTargetNextTile(emitter, grid.GetTile(targetPos)))
-                {
-                    sourcePos = candidateSourcePos;
-                    approach = candidate;
-                    return true;
-                }
-            }
-
-            Vector2Int delta = targetPos - emitter.Position;
-            Vector2Int diagonalSource = targetPos - new Vector2Int(
-                Mathf.Clamp(delta.x, -1, 1),
-                Mathf.Clamp(delta.y, -1, 1));
-
-            if (IsInnerEightWaySource(emitter, diagonalSource, nextDistance) &&
-                CanEmitterExpandFrom(emitter, grid.GetTile(diagonalSource)) &&
-                CanEmitterTargetNextTile(emitter, grid.GetTile(targetPos)))
-            {
-                sourcePos = diagonalSource;
-                approach = GetDominantApproach(delta);
-                return true;
-            }
-
-            sourcePos = Vector2Int.zero;
-            approach = Vector2Int.zero;
-            return false;
-        }
-
-        private static bool IsInnerEightWaySource(Emitter emitter, Vector2Int sourcePos, int nextDistance)
-        {
-            int distance = Mathf.Max(
-                Mathf.Abs(sourcePos.x - emitter.Position.x),
-                Mathf.Abs(sourcePos.y - emitter.Position.y));
-            return distance < nextDistance;
-        }
-
-        private static Vector2Int GetDominantApproach(Vector2Int delta)
-        {
-            if (Mathf.Abs(delta.x) >= Mathf.Abs(delta.y))
-            {
-                return new Vector2Int(Mathf.Clamp(delta.x, -1, 1), 0);
-            }
-
-            return new Vector2Int(0, Mathf.Clamp(delta.y, -1, 1));
         }
 
         private static bool IsAtMaxRange(Emitter emitter, int connectedDistance)

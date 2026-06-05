@@ -182,7 +182,7 @@ namespace Severance
 
             foreach (TileData tile in grid.AllTiles)
             {
-                if (tile.Owner != Owner.Player)
+                if (tile.Owner != Owner.Player || tile.Level <= 0)
                 {
                     continue;
                 }
@@ -324,7 +324,9 @@ namespace Severance
             {
                 foreach (TileData tile in grid.AllTiles)
                 {
-                    if (tile.Owner == Owner.Player && TileData.NormalizeResourceType(tile.ResourceType) == TileResourceType.PowerNode)
+                    if (tile.Owner == Owner.Player &&
+                        tile.Level > 0 &&
+                        TileData.NormalizeResourceType(tile.ResourceType) == TileResourceType.PowerNode)
                     {
                         nodeCapacity += Mathf.Max(0, tile.ResourceYield);
                     }

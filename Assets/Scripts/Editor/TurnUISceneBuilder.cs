@@ -68,8 +68,8 @@ namespace Severance.Editor
 
             RectTransform directionPanel = CreateOptionPanel(root, "DirectionOptions",
                 new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f),
-                new Vector2(96f, 94f), new Vector2(230f, 254f));
-            string[] directionLabels = { "위", "아래", "왼쪽", "오른쪽", "T자", "십자", "팔방" };
+                new Vector2(96f, 94f), new Vector2(230f, 222f));
+            string[] directionLabels = { "위", "아래", "왼쪽", "오른쪽", "T자", "십자" };
             foreach (string label in directionLabels)
             {
                 CreateButton(directionPanel, $"Direction_{label}", label, 210f);

@@ -33,7 +33,7 @@ namespace Severance
         /// <summary>현재 턴 수 (1부터 시작).</summary>
         private int _currentTurn;
 
-        /// <summary>런타임에 확정된 플레이어 메인 코어 좌표.</summary>
+        /// <summary>런타임에 확정된 플레이어 코어 좌표.</summary>
         private Vector2Int _playerCorePosition;
 
         #endregion
@@ -117,7 +117,7 @@ namespace Severance
             // --- 그리드 논리 데이터 초기화 ---
             GridManager.Instance.Initialize(width, height);
 
-            // --- 자원/플레이어 코어/적 초기 상태 준비 ---
+            // --- 자원/적 초기 상태 준비 ---
             ResourceManager.Instance.Initialize(gameConfig);
             ResourceManager.Instance.SeedResources();
             PlacePlayerCore();
@@ -136,6 +136,36 @@ namespace Severance
             }
 
             Debug.Log("[GameManager] 모든 핵심 시스템 초기화 완료.");
+        }
+
+        private void PlacePlayerCore()
+        {
+            if (!EmitterManager.HasInstance && GridManager.HasInstance)
+            {
+                _ = EmitterManager.Instance;
+            }
+
+            Vector2Int corePos = gameConfig.PlayerCorePosition;
+            if (!GridManager.Instance.IsInBounds(corePos))
+            {
+                corePos = new Vector2Int(
+                    Mathf.Clamp(corePos.x, 0, gameConfig.GridWidth - 1),
+                    Mathf.Clamp(corePos.y, 0, gameConfig.GridHeight - 1));
+            }
+            _playerCorePosition = corePos;
+
+            if (EmitterManager.Instance.TryPlaceEmitter(
+                    corePos,
+                    Owner.Player,
+                    1,
+                    gameConfig.PlayerStartDirection,
+                    isCore: true,
+                    ignorePlacementRules: true,
+                    isInitialPreset: true,
+                    bypassesBaseRequirement: true))
+            {
+                EmitterManager.Instance.SeedStartingArea(EmitterManager.Instance.GetEmitterAt(corePos));
+            }
         }
 
         private void ValidateSceneTurnUI()
@@ -235,30 +265,6 @@ namespace Severance
             }
 
             SceneManager.LoadScene(activeScene.name);
-        }
-
-        private void PlacePlayerCore()
-        {
-            if (!EmitterManager.HasInstance && GridManager.HasInstance)
-            {
-                _ = EmitterManager.Instance;
-            }
-
-            Vector2Int corePos = gameConfig.PlayerCorePosition;
-            if (!GridManager.Instance.IsInBounds(corePos))
-            {
-                corePos = new Vector2Int(
-                    Mathf.Clamp(corePos.x, 0, gameConfig.GridWidth - 1),
-                    Mathf.Clamp(corePos.y, 0, gameConfig.GridHeight - 1));
-            }
-            _playerCorePosition = corePos;
-
-            EmitterManager.Instance.TryPlaceEmitter(
-                corePos,
-                Owner.Player,
-                1,
-                gameConfig.PlayerStartDirection,
-                isCore: true);
         }
 
         /// <summary>

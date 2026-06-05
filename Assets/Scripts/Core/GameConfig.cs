@@ -182,6 +182,7 @@ namespace Severance
         [SerializeField] private EmitterSetting rightSetting = new EmitterSetting { requiredResource = TileResourceType.VeinIron, cost = 1, maxRange = 0 };
         [SerializeField] private EmitterSetting tShapeSetting = new EmitterSetting { requiredResource = TileResourceType.VeinCopper, cost = 1, maxRange = 0 };
         [SerializeField] private EmitterSetting crossSetting = new EmitterSetting { requiredResource = TileResourceType.VeinCopper, cost = 1, maxRange = 0 };
+        [HideInInspector]
         [SerializeField] private EmitterSetting eightWaySetting = new EmitterSetting { requiredResource = TileResourceType.VeinCopper, cost = 2, maxRange = 5 };
 
         public EmitterSetting GetEmitterSetting(EmitterDirection direction)
@@ -193,8 +194,8 @@ namespace Severance
                 case EmitterDirection.Left: return leftSetting;
                 case EmitterDirection.Right: return rightSetting;
                 case EmitterDirection.TShape: return tShapeSetting;
+                case EmitterDirection.EightWay:
                 case EmitterDirection.Cross: return crossSetting;
-                case EmitterDirection.EightWay: return eightWaySetting;
                 default: return null;
             }
         }
@@ -204,16 +205,16 @@ namespace Severance
         #region Player Start
 
         [Header("플레이어 코어")]
-        [Tooltip("플레이어 메인 코어를 설치할 시작 좌표.")]
+        [Tooltip("플레이어 코어를 설치하고 시작 5x5 영역을 유지할 중심 좌표.")]
         [SerializeField] private Vector2Int playerCorePosition = new Vector2Int(2, 2);
 
-        [Tooltip("플레이어 코어의 초기 확장 방향.")]
+        [Tooltip("플레이어 코어의 표시 방향. 코어는 시작 5x5 유지 전용이라 자동 확장하지 않습니다.")]
         [SerializeField] private EmitterDirection playerStartDirection = EmitterDirection.Cross;
 
-        /// <summary>플레이어 메인 코어 좌표입니다.</summary>
+        /// <summary>플레이어 코어 좌표입니다.</summary>
         public Vector2Int PlayerCorePosition => playerCorePosition;
 
-        /// <summary>플레이어 코어의 초기 확장 방향입니다.</summary>
+        /// <summary>플레이어 코어 표시 방향입니다.</summary>
         public EmitterDirection PlayerStartDirection => playerStartDirection;
 
         #endregion

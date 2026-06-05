@@ -48,11 +48,31 @@ namespace Severance.Editor
         [SerializeField] private GameConfig _selectedConfig;
         [SerializeField] private StageConfig _selectedStage;
 
+        private static readonly EmitterDirection[] DirectionOptions =
+        {
+            EmitterDirection.Up,
+            EmitterDirection.Down,
+            EmitterDirection.Left,
+            EmitterDirection.Right,
+            EmitterDirection.TShape,
+            EmitterDirection.Cross
+        };
+
+        private static readonly string[] DirectionOptionLabels =
+        {
+            "위",
+            "아래",
+            "왼쪽",
+            "오른쪽",
+            "T자",
+            "십자"
+        };
+
         // 브러시 설정
         private ToolType _activeTool = ToolType.Eraser;
         private int _brushYield = 1;
         private int _brushLevel = 1;
-        private EmitterDirection _brushDirection = EmitterDirection.EightWay;
+        private EmitterDirection _brushDirection = EmitterDirection.Cross;
 
         // 2D 맵 데이터 (직렬화 유지보수를 위해 인스턴스 해제 방지)
         private CellData[,] _map;
@@ -244,7 +264,7 @@ namespace Severance.Editor
                         EditorGUILayout.LabelField("이미터 레벨:", GUILayout.Width(80));
                         _brushLevel = EditorGUILayout.IntSlider(_brushLevel, 1, maxEnemyLevel, GUILayout.Width(180));
                         EditorGUILayout.Space(10);
-                        _brushDirection = (EmitterDirection)EditorGUILayout.EnumPopup("방향 템플릿:", _brushDirection);
+                        DrawDirectionBrushPopup();
                     }
                     EditorGUILayout.EndHorizontal();
                 }
@@ -375,7 +395,6 @@ namespace Severance.Editor
                 case EmitterDirection.Right: return "R";
                 case EmitterDirection.TShape: return "T";
                 case EmitterDirection.Cross: return "+";
-                case EmitterDirection.EightWay: return "8W";
                 default: return "-";
             }
         }
@@ -468,7 +487,7 @@ namespace Severance.Editor
                         CellData cell = new CellData();
                         cell.type = CellType.EnemyEmitter;
                         cell.level = emitter.level;
-                        cell.direction = emitter.direction;
+                        cell.direction = NormalizeDirection(emitter.direction);
                         _map[emitter.position.x, emitter.position.y] = cell;
                     }
                 }
@@ -506,7 +525,7 @@ namespace Severance.Editor
                         }
                         else if (cell.type == CellType.EnemyEmitter)
                         {
-                            savedEmitters.Add(new StageEnemyEmitterNode(pos, cell.level, cell.direction));
+                            savedEmitters.Add(new StageEnemyEmitterNode(pos, cell.level, NormalizeDirection(cell.direction)));
                         }
                     }
                 }
@@ -549,6 +568,32 @@ namespace Severance.Editor
         }
 
         #endregion
+
+        private void DrawDirectionBrushPopup()
+        {
+            _brushDirection = NormalizeDirection(_brushDirection);
+            int selectedIndex = GetDirectionOptionIndex(_brushDirection);
+            selectedIndex = EditorGUILayout.Popup("방향 템플릿:", selectedIndex, DirectionOptionLabels);
+            _brushDirection = DirectionOptions[selectedIndex];
+        }
+
+        private static EmitterDirection NormalizeDirection(EmitterDirection direction)
+        {
+            return direction == EmitterDirection.EightWay ? EmitterDirection.Cross : direction;
+        }
+
+        private static int GetDirectionOptionIndex(EmitterDirection direction)
+        {
+            for (int i = 0; i < DirectionOptions.Length; i++)
+            {
+                if (DirectionOptions[i] == direction)
+                {
+                    return i;
+                }
+            }
+
+            return DirectionOptions.Length - 1;
+        }
 
         #region Footer & Actions
 

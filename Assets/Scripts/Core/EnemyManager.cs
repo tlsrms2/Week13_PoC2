@@ -64,7 +64,13 @@ namespace Severance
             int stageSpawned = SpawnStageEnemyEmitters();
             if (stageSpawned == 0)
             {
-                TryExecuteStrategy(EnemyStrategy.HiddenIncursion, 0, allowVisibleIncursion: true);
+                int existingEnemyCount = EmitterManager.HasInstance
+                    ? EmitterManager.Instance.GetEmitters(Owner.Enemy).Count
+                    : 0;
+                if (TryExecuteStrategy(EnemyStrategy.HiddenIncursion, 0, allowVisibleIncursion: true))
+                {
+                    SeedNewEnemyStartingAreas(existingEnemyCount);
+                }
             }
         }
 
@@ -117,6 +123,7 @@ namespace Severance
                     isInitialPreset: true,
                     bypassesBaseRequirement: true))
                 {
+                    EmitterManager.Instance.SeedStartingArea(EmitterManager.Instance.GetEmitterAt(node.position));
                     spawned++;
                 }
             }
@@ -165,7 +172,7 @@ namespace Severance
                     candidates = BuildEnemyTerritoryCandidates(grid, dynamicLevel, strategy, "직선 돌파");
                     break;
                 case EnemyStrategy.Fanout:
-                    candidates = BuildEnemyTerritoryCandidates(grid, dynamicLevel, strategy, "팔방 확산");
+                    candidates = BuildEnemyTerritoryCandidates(grid, dynamicLevel, strategy, "확산");
                     break;
                 case EnemyStrategy.HiddenIncursion:
                     candidates = BuildNeutralIncursionCandidates(grid, dynamicLevel, strategy, "은닉 침투", allowVisibleIncursion);
@@ -309,6 +316,20 @@ namespace Severance
             return false;
         }
 
+        private void SeedNewEnemyStartingAreas(int existingEnemyCount)
+        {
+            if (!EmitterManager.HasInstance)
+            {
+                return;
+            }
+
+            List<Emitter> enemyEmitters = EmitterManager.Instance.GetEmitters(Owner.Enemy);
+            for (int i = Mathf.Max(0, existingEnemyCount); i < enemyEmitters.Count; i++)
+            {
+                EmitterManager.Instance.SeedStartingArea(enemyEmitters[i]);
+            }
+        }
+
         private List<EnemyStrategy> BuildEnabledStrategies()
         {
             List<EnemyStrategy> pool = new List<EnemyStrategy>();
@@ -446,9 +467,9 @@ namespace Severance
                 case EnemyStrategy.Spearhead:
                     return PickDirectionTowardCore(from);
                 case EnemyStrategy.Fanout:
-                    return EmitterDirection.EightWay;
+                    return EmitterDirection.Cross;
                 case EnemyStrategy.Consolidate:
-                    return level >= 3 ? EmitterDirection.EightWay : EmitterDirection.Cross;
+                    return EmitterDirection.Cross;
                 case EnemyStrategy.ResourceRaid:
                     return level >= 2 ? EmitterDirection.Cross : PickDirectionTowardCore(from);
                 default:
@@ -460,7 +481,7 @@ namespace Severance
         {
             if (strategy == EnemyStrategy.HiddenIncursion)
             {
-                return level >= 3 ? EmitterDirection.EightWay : PickDirectionTowardCore(from);
+                return level >= 3 ? EmitterDirection.Cross : PickDirectionTowardCore(from);
             }
 
             if (strategy == EnemyStrategy.ResourceRaid)

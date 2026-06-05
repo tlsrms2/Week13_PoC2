@@ -55,7 +55,7 @@ namespace Severance
         TShape = 4,
         /// <summary>십자(+) 모양 확장: 4가지 인접 방향.</summary>
         Cross = 5,
-        /// <summary>대각선을 포함한 8방향 전체 확장.</summary>
+        /// <summary>이전 저장 데이터 호환용 값. 런타임에서는 십자 확장으로 정규화됩니다.</summary>
         EightWay = 6
     }
 

@@ -268,6 +268,12 @@ namespace Severance
                 return;
             }
 
+            if (emitter.IsCore)
+            {
+                Debug.LogWarning("[EmitterManager] 플레이어 코어는 전원을 끌 수 없습니다.");
+                return;
+            }
+
             emitter.Toggle();
             Debug.Log($"[EmitterManager] 이미터 토글 가동: {emitter}");
 
@@ -277,6 +283,7 @@ namespace Severance
             }
 
             RefreshExpansionIntentPreviews();
+            GameEvents.RaiseResourceChanged();
             GameEvents.RaiseEmitterToggled(emitter);
         }
 
@@ -306,7 +313,7 @@ namespace Severance
 
             foreach (Emitter emitter in emitters)
             {
-                if (!emitter.IsOn)
+                if (!emitter.IsOn || emitter.IsCore)
                 {
                     continue;
                 }
@@ -571,124 +578,43 @@ namespace Severance
 
         #region Private Helpers
 
+        public void SeedStartingArea(Emitter emitter, int radius = 2)
+        {
+            if (emitter == null || !GridManager.HasInstance)
+            {
+                return;
+            }
+
+            GridManager grid = GridManager.Instance;
+            foreach (TileData tile in grid.GetTilesInRadius(emitter.Position, Mathf.Max(0, radius)))
+            {
+                if (tile == null ||
+                    (tile.IsOccupiedByEmitter && tile.Emitter != emitter) ||
+                    (tile.Owner != Owner.Neutral && tile.Owner != emitter.Owner))
+                {
+                    continue;
+                }
+
+                tile.SetOwnership(emitter.Owner, 1, emitter);
+                if (tile.Position != emitter.Position && !emitter.OwnedTiles.Contains(tile.Position))
+                {
+                    emitter.OwnedTiles.Add(tile.Position);
+                }
+            }
+        }
+
         /// <summary>
         /// 단일 이미터를 분석하여 설정 템플릿 방향별 프론티어 영역으로의 다음 턴 확장 요청을 등록합니다.
         /// </summary>
         private void CollectExpansionRequests(Emitter emitter, GridManager grid)
         {
-            if (emitter.Direction == EmitterDirection.EightWay)
-            {
-                // 1. 8방향 정규화 및 최소 연결 거리 동기화 (정사각형 모양 유지 목적)
-                int minConnected = int.MaxValue;
-                List<Vector2Int> eightDirs = emitter.GetExpansionDirections();
-                foreach (Vector2Int d in eightDirs)
-                {
-                    NormalizeFrontier(emitter, grid, d);
-                    minConnected = Mathf.Min(minConnected, emitter.ExpansionFrontier[d]);
-                }
-                foreach (Vector2Int d in eightDirs)
-                {
-                    emitter.ExpansionFrontier[d] = minConnected;
-                }
-
-                // 2. 최대 범위 검사
-                int currentDistance = minConnected;
-                int maxRange = 0;
-                if (GameManager.HasInstance && GameManager.Instance.Config != null)
-                {
-                    var setting = GameManager.Instance.Config.GetEmitterSetting(emitter.Direction);
-                    if (setting != null)
-                    {
-                        maxRange = setting.maxRange;
-                    }
-                }
-
-                if (maxRange > 0 && currentDistance >= maxRange)
-                {
-                    return;
-                }
-
-                // 3. 차기 정사각형 테두리 좌표들 전체 수집 (nextDist = currentDistance + 1)
-                int nextDist = currentDistance + 1;
-                int cx = emitter.Position.x;
-                int cy = emitter.Position.y;
-
-                List<Vector2Int> borderTiles = new List<Vector2Int>();
-                for (int dx = -nextDist; dx <= nextDist; dx++)
-                {
-                    for (int dy = -nextDist; dy <= nextDist; dy++)
-                    {
-                        if (Mathf.Abs(dx) == nextDist || Mathf.Abs(dy) == nextDist)
-                        {
-                            borderTiles.Add(new Vector2Int(cx + dx, cy + dy));
-                        }
-                    }
-                }
-
-                // 4. 수집된 테두리 좌표별 확장 요청 추가
-                foreach (Vector2Int nextPos in borderTiles)
-                {
-                    if (!grid.IsInBounds(nextPos)) continue;
-
-                    TileData targetTile = grid.GetTile(nextPos);
-                    if (targetTile == null) continue;
-
-                    // 팔각 진원 팽창 시, 테두리 타일로 팽창 가능한지 검사.
-                    // 출발지(안쪽) 타일들 중 하나라도 아군 소유이고 부모 이미터를 포함하는지 확인
-                    bool canExpand = false;
-                    List<TileData> neighbors = grid.GetNeighbors(nextPos, includeDiagonals: true);
-                    foreach (TileData nb in neighbors)
-                    {
-                        int distToCenter = Mathf.Max(Mathf.Abs(nb.Position.x - emitter.Position.x),
-                                                     Mathf.Abs(nb.Position.y - emitter.Position.y));
-                        if (distToCenter < nextDist)
-                        {
-                            if (CanEmitterExpandFrom(emitter, nb))
-                            {
-                                canExpand = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    // 맨 첫 턴(nextDist == 1)에는 이미터 본체 타일에서 출발
-                    if (nextDist == 1)
-                    {
-                        TileData centerTile = grid.GetTile(emitter.Position);
-                        if (CanEmitterExpandFrom(emitter, centerTile))
-                        {
-                            canExpand = true;
-                        }
-                    }
-
-                    if (!canExpand) continue;
-
-                    // Direction 오프셋 빌딩 (대략적인 8방향 단위 벡터로 투영)
-                    Vector2Int delta = nextPos - emitter.Position;
-                    Vector2Int dir = new Vector2Int(Mathf.Clamp(delta.x, -1, 1), Mathf.Clamp(delta.y, -1, 1));
-
-                    int requestLevel = emitter.Level;
-                    ExpansionRequest req = new ExpansionRequest(emitter, dir, nextPos, requestLevel);
-                    if (emitter.Owner == Owner.Player)
-                    {
-                        _playerRequests.Add(req);
-                    }
-                    else
-                    {
-                        _enemyRequests.Add(req);
-                    }
-                }
-                return;
-            }
-
-            // 기존 십자, T자, 단방향 등 선형 확장 처리
             List<Vector2Int> directions = emitter.GetExpansionDirections();
 
             foreach (Vector2Int dir in directions)
             {
                 NormalizeFrontier(emitter, grid, dir);
 
-                // 이미터의 최대 범위 검사 (팔각 진원 등 최대로 뻗어나가는 범위 제한 적용)
+                // 이미터의 최대 범위 검사
                 int currentDistance = emitter.ExpansionFrontier.ContainsKey(dir) ? emitter.ExpansionFrontier[dir] : 0;
 
                 int maxRange = 0;
@@ -812,21 +738,7 @@ namespace Severance
                             req.Emitter.OwnedTiles.Add(tile.Position);
                         }
 
-                        // 팔각 진원(EightWay)인 경우 8개 방향 프론티어 거리를 사각형 크기만큼 일괄 동기화
-                        if (req.Emitter.Direction == EmitterDirection.EightWay)
-                        {
-                            int dist = Mathf.Max(Mathf.Abs(tile.Position.x - req.Emitter.Position.x),
-                                                 Mathf.Abs(tile.Position.y - req.Emitter.Position.y));
-                            List<Vector2Int> eightDirs = req.Emitter.GetExpansionDirections();
-                            foreach (var d in eightDirs)
-                            {
-                                req.Emitter.ExpansionFrontier[d] = dist;
-                            }
-                        }
-                        else
-                        {
-                            req.Emitter.AdvanceFrontier(req.Direction);
-                        }
+                        req.Emitter.AdvanceFrontier(req.Direction);
                     }
                 }
             }
@@ -845,17 +757,6 @@ namespace Severance
         {
             HashSet<Emitter> contributors = new HashSet<Emitter>();
             int levelSum = 0;
-
-            if (tile.IsOccupiedByEmitter && tile.Owner == owner)
-            {
-                Emitter tileEmitter = tile.Emitter;
-                if (tileEmitter == null || tileEmitter.Owner != owner)
-                {
-                    return 0;
-                }
-
-                return tileEmitter.Level;
-            }
 
             if (tile.Owner == owner)
             {
@@ -1265,7 +1166,9 @@ namespace Severance
 
             foreach (Emitter parent in baseTile.ParentEmitters)
             {
-                if (parent == null || parent == emitter || parent.Owner != emitter.Owner)
+                if (parent == null ||
+                    parent == emitter ||
+                    parent.Owner != emitter.Owner)
                 {
                     continue;
                 }
@@ -1321,9 +1224,6 @@ namespace Severance
 
                 switch (emitter.Direction)
                 {
-                    case EmitterDirection.EightWay:
-                        load += 4;
-                        break;
                     case EmitterDirection.Cross:
                         load += 3;
                         break;

@@ -109,8 +109,7 @@ namespace Severance
             EmitterDirection.Left,
             EmitterDirection.Right,
             EmitterDirection.TShape,
-            EmitterDirection.Cross,
-            EmitterDirection.EightWay
+            EmitterDirection.Cross
         };
 
         private int _directionIndex = 5;
@@ -236,10 +235,16 @@ namespace Severance
             }
 
             Button[] buttons = _directionOptionsPanel.GetComponentsInChildren<Button>(true);
-            int count = Mathf.Min(buttons.Length, _directionOptions.Length);
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < buttons.Length; i++)
             {
+                if (i >= _directionOptions.Length)
+                {
+                    buttons[i].gameObject.SetActive(false);
+                    continue;
+                }
+
                 int optionIndex = i;
+                buttons[i].gameObject.SetActive(true);
                 buttons[i].onClick.AddListener(() => SelectDirection(optionIndex));
             }
 
@@ -573,8 +578,6 @@ namespace Severance
                     return "T자";
                 case EmitterDirection.Cross:
                     return "십자";
-                case EmitterDirection.EightWay:
-                    return "팔방";
                 default:
                     return direction.ToString();
             }
@@ -710,9 +713,15 @@ namespace Severance
             }
 
             Button[] buttons = _directionOptionsPanel.GetComponentsInChildren<Button>(true);
-            int count = Mathf.Min(buttons.Length, _directionOptions.Length);
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < buttons.Length; i++)
             {
+                if (i >= _directionOptions.Length)
+                {
+                    buttons[i].gameObject.SetActive(false);
+                    continue;
+                }
+
+                buttons[i].gameObject.SetActive(true);
                 SetButtonLabel(buttons[i], GetDirectionOptionLabel(_directionOptions[i]));
             }
         }

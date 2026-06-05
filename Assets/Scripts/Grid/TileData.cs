@@ -60,37 +60,7 @@ namespace Severance
         {
             get
             {
-                if (Owner == Owner.Neutral)
-                {
-                    return 0;
-                }
-
-                if (!IsOccupiedByEmitter)
-                {
-                    return Level;
-                }
-
-                int levelSum = 0;
-                foreach (var em in ParentEmitters)
-                {
-                    if (em == null)
-                    {
-                        continue;
-                    }
-
-                    if (em.Owner == Owner && em.IsOn)
-                    {
-                        levelSum += em.Level;
-                    }
-                }
-
-                if (levelSum == 0)
-                {
-                    return Level;
-                }
-
-                // 진원 타일의 실제 Level은 고정하지만, 색은 일반 타일이었다면 계산됐을 가상 레벨을 따른다.
-                return Mathf.Clamp(levelSum, 1, 5);
+                return Owner == Owner.Neutral ? 0 : Level;
             }
         }
 
@@ -140,13 +110,13 @@ namespace Severance
                 }
 
                 Owner = Emitter.Owner;
-                Level = Emitter.Level;
 
                 if (source != null)
                 {
                     ParentEmitters.Add(source);
                 }
 
+                Level = CalculateParentLevel();
                 GameEvents.RaiseTileChanged(Position);
                 return;
             }
@@ -236,7 +206,7 @@ namespace Severance
                 int previousLevel = Level;
 
                 Owner = Emitter.Owner;
-                Level = Emitter.Level;
+                Level = CalculateParentLevel();
 
                 if (previousOwner != Owner || previousLevel != Level)
                 {
@@ -246,7 +216,7 @@ namespace Severance
                 return;
             }
 
-            if (Owner == Owner.Neutral || ParentEmitters.Count == 0)
+            if (Owner == Owner.Neutral)
             {
                 if (Level != 0 || Owner != Owner.Neutral)
                 {
@@ -261,10 +231,31 @@ namespace Severance
                 return;
             }
 
-            int levelSum = 0;
-            foreach (var emitter in ParentEmitters)
+            if (ParentEmitters.Count == 0)
             {
-                if (emitter == null || emitter.Owner != Owner || !emitter.IsOn)
+                ClearOwnership();
+                return;
+            }
+
+            int parentLevel = CalculateParentLevel();
+            if (parentLevel == 0)
+            {
+                SetLevelIfChanged(0);
+                return;
+            }
+
+            if (Level != parentLevel)
+            {
+                SetLevelIfChanged(parentLevel);
+            }
+        }
+
+        private int CalculateParentLevel()
+        {
+            int levelSum = 0;
+            foreach (Emitter emitter in ParentEmitters)
+            {
+                if (emitter == null || emitter.Owner != Owner)
                 {
                     continue;
                 }
@@ -272,25 +263,20 @@ namespace Severance
                 levelSum += emitter.Level;
             }
 
-            // 활성화된 부모 이미터가 0개인 비활성 상태 타일의 경우 레벨 변동 없이 이전 레벨을 유지
-            if (levelSum == 0)
+            if (IsOccupiedByEmitter &&
+                Emitter != null &&
+                Emitter.Owner == Owner &&
+                !ParentEmitters.Contains(Emitter))
             {
-                return;
+                levelSum += Emitter.Level;
             }
 
-            // 최종 레벨 = 활성 부모 이미터 레벨 합산
-            int newLevel = levelSum;
-            newLevel = Mathf.Clamp(newLevel, 1, 5); // 최대 레벨 제한
-
-            if (Level != newLevel)
-            {
-                SetLevelIfChanged(newLevel);
-            }
+            return levelSum > 0 ? Mathf.Clamp(levelSum, 1, 5) : 0;
         }
 
         private void SetLevelIfChanged(int level)
         {
-            int newLevel = Mathf.Max(1, level);
+            int newLevel = Mathf.Clamp(level, 0, 5);
             if (Level == newLevel)
             {
                 return;
